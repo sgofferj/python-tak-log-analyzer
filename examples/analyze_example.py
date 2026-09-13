@@ -1,4 +1,5 @@
 """Example: analyze local crash logs and print report."""
+
 from pathlib import Path
 from tak_log_analyzer.parser import parse_file
 from tak_log_analyzer.analyzer import analyze

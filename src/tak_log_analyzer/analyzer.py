@@ -21,12 +21,12 @@ def _parse_time(value: str | None) -> datetime | None:
         v = value.strip().replace("Z", "+00:00")
         # strip millis variant like 2026-03-25T18:37:44.889 -> handled by fromisoformat
         return datetime.fromisoformat(v)
-    except Exception:  # pylint: disable=broad-exception-caught
+    except Exception:  # pylint: disable=broad-exception-caught  # nosec B110
         pass
     # try date only
     try:
         return datetime.strptime(value.strip()[:10], "%Y-%m-%d").replace(tzinfo=timezone.utc)
-    except Exception:  # pylint: disable=broad-exception-caught
+    except Exception:  # pylint: disable=broad-exception-caught  # nosec B110
         return None
 
 
