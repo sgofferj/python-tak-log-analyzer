@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +21,40 @@ from .parser import parse_file
 console = Console()
 
 
+def _load_dotenv(path: Path) -> dict[str, str]:
+    values: dict[str, str] = {}
+    if not path.exists():
+        return values
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        values[key.strip()] = value.strip().strip('"').strip("'")
+    return values
+
+
+def _resolve_config(
+    host: str | None, cert: str | None, key: str | None, ca_cert: str | None
+) -> tuple[str, str, str, str | None]:
+    # try .env in cwd and repo root
+    dotenv: dict[str, str] = {}
+    for p in [Path.cwd() / ".env", Path(__file__).resolve().parents[2] / ".env", Path(".env")]:
+        dotenv.update(_load_dotenv(p))
+    # env vars override .env
+    host = host or os.environ.get("TAK_LIVE_HOST") or dotenv.get("TAK_LIVE_HOST")
+    cert = cert or os.environ.get("TAK_LIVE_CERT") or dotenv.get("TAK_LIVE_CERT")
+    key = key or os.environ.get("TAK_LIVE_KEY") or dotenv.get("TAK_LIVE_KEY")
+    ca_cert = ca_cert or os.environ.get("TAK_LIVE_CA") or dotenv.get("TAK_LIVE_CA")
+    if not host or not cert or not key:
+        console.print("[red]Missing --host/--cert/--key and no .env found.[/red]")
+        console.print(
+            "Create .env with TAK_LIVE_HOST, TAK_LIVE_CERT, TAK_LIVE_KEY (see .env.example) or pass options explicitly."
+        )
+        raise SystemExit(2)
+    return host, cert, key, ca_cert
+
+
 @click.group()
 @click.option("-l", "--loglevel", default=30, help="Python log level 10=DEBUG 20=INFO")
 @click.option("-v", "--verbose", count=True, help="Shorthand -v/-vv for info/debug")
@@ -33,17 +68,25 @@ def cli(loglevel: int, verbose: int) -> None:
 
 
 @cli.command("list")
-@click.option("--host", required=True, help="TAK Server hostname (without port)")
-@click.option("--cert", required=True, type=click.Path(exists=True), help="Client PEM")
-@click.option("--key", required=True, type=click.Path(exists=True), help="Client key")
-@click.option("--ca-cert", type=click.Path(exists=True), help="CA / server cert for verification")
+@click.option("--host", required=False, help="TAK Server hostname (without port) [env: TAK_LIVE_HOST / .env]")
+@click.option("--cert", required=False, type=click.Path(exists=True), help="Client PEM [env: TAK_LIVE_CERT]")
+@click.option("--key", required=False, type=click.Path(exists=True), help="Client key [env: TAK_LIVE_KEY]")
+@click.option("--ca-cert", type=click.Path(exists=True), help="CA / server cert for verification [env: TAK_LIVE_CA]")
 @click.option("--query", help="Server-side LIKE filter (search box)")
 @click.option("--uid", help="Exact UID filter (client-side)")
 @click.option("--metrics", is_flag=True, help="List metric logs instead of error logs")
 def list_cmd(
-    host: str, cert: str, key: str, ca_cert: str | None, query: str | None, uid: str | None, metrics: bool
+    host: str | None,
+    cert: str | None,
+    key: str | None,
+    ca_cert: str | None,
+    query: str | None,
+    uid: str | None,
+    metrics: bool,
 ) -> None:
     """List device logs (without downloading)."""
+
+    host, cert, key, ca_cert = _resolve_config(host, cert, key, ca_cert)
 
     async def _run() -> None:
         status, logs = await dl_list(host, cert, key, query=query, uid=uid, metrics=metrics, ca_cert=ca_cert)
@@ -77,18 +120,18 @@ def list_cmd(
 
 
 @cli.command("download")
-@click.option("--host", required=True)
-@click.option("--cert", required=True, type=click.Path(exists=True))
-@click.option("--key", required=True, type=click.Path(exists=True))
-@click.option("--ca-cert", type=click.Path(exists=True))
+@click.option("--host", required=False, help="TAK Server hostname [env: TAK_LIVE_HOST / .env]")
+@click.option("--cert", required=False, type=click.Path(exists=True), help="Client PEM [env: TAK_LIVE_CERT]")
+@click.option("--key", required=False, type=click.Path(exists=True), help="Client key [env: TAK_LIVE_KEY]")
+@click.option("--ca-cert", type=click.Path(exists=True), help="CA cert [env: TAK_LIVE_CA]")
 @click.option("--out", "out_dir", required=True, type=click.Path(), help="Output directory")
 @click.option("--query", help="Server-side LIKE filter")
 @click.option("--uid", help="Exact UID filter")
 @click.option("--ids", help="Comma-separated ids or ALL")
 def download_cmd(
-    host: str,
-    cert: str,
-    key: str,
+    host: str | None,
+    cert: str | None,
+    key: str | None,
     ca_cert: str | None,
     out_dir: str,
     query: str | None,
@@ -96,6 +139,8 @@ def download_cmd(
     ids: str | None,
 ) -> None:
     """Download (all|filtered) logs to a directory."""
+
+    host, cert, key, ca_cert = _resolve_config(host, cert, key, ca_cert)
 
     async def _run() -> None:
         ids_arg: Any = ids
@@ -215,19 +260,19 @@ def _print_report(report: Any) -> None:
 
 
 @cli.command("fetch-analyze")
-@click.option("--host", required=True)
-@click.option("--cert", required=True, type=click.Path(exists=True))
-@click.option("--key", required=True, type=click.Path(exists=True))
-@click.option("--ca-cert", type=click.Path(exists=True))
+@click.option("--host", required=False, help="TAK Server hostname [env: TAK_LIVE_HOST / .env]")
+@click.option("--cert", required=False, type=click.Path(exists=True), help="Client PEM [env: TAK_LIVE_CERT]")
+@click.option("--key", required=False, type=click.Path(exists=True), help="Client key [env: TAK_LIVE_KEY]")
+@click.option("--ca-cert", type=click.Path(exists=True), help="CA cert [env: TAK_LIVE_CA]")
 @click.option("--query", help="LIKE filter")
 @click.option("--uid", help="Exact UID")
 @click.option("--ids", help="Comma ids or ALL")
 @click.option("--format", "fmt", type=click.Choice(["table", "json"]), default="table")
 @click.option("--out", type=click.Path(), help="Write JSON report")
 def fetch_analyze_cmd(
-    host: str,
-    cert: str,
-    key: str,
+    host: str | None,
+    cert: str | None,
+    key: str | None,
     ca_cert: str | None,
     query: str | None,
     uid: str | None,
@@ -237,6 +282,8 @@ def fetch_analyze_cmd(
 ) -> None:
     """Download and analyze in one step (no intermediate dir kept)."""
     import tempfile
+
+    host, cert, key, ca_cert = _resolve_config(host, cert, key, ca_cert)
 
     async def _run() -> None:
         with tempfile.TemporaryDirectory() as tmp:
