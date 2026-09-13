@@ -1,0 +1,96 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+default_language_version:
+    python: python3
+default_install_hook_types:
+  - pre-commit
+  - commit-msg
+repos:
+-   repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.2.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        args: []
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+    -   id: no-commit-to-branch
+    -   id: check-executables-have-shebangs
+    -   id: check-ast
+    -   id: check-toml
+    -   id: trailing-whitespace
+    -   id: end-of-file-fixer
+    -   id: check-yaml
+    -   id: check-added-large-files
+    -   id: check-case-conflict
+    -   id: check-json
+    -   id: check-merge-conflict
+    -   id: check-symlinks
+    -   id: detect-private-key
+    -   id: pretty-format-json
+        args:
+        - --autofix
+-   repo: https://github.com/psf/black
+    rev: 25.1.0
+    hooks:
+    -   id: black
+        language_version: python3
+-   repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.15.0
+    hooks:
+    -   id: mypy
+        language: system
+        args: ["--strict"]
+        exclude: ^(tests|live_tests)/
+-   repo: https://github.com/pycqa/pylint
+    rev: v3.3.7
+    hooks:
+    -   id: pylint
+        language: system
+        exclude: ^(tests|live_tests)/
+-   repo: https://github.com/Lucas-C/pre-commit-hooks
+    rev: v1.5.5
+    hooks:
+    -   id: forbid-crlf
+    -   id: remove-crlf
+    -   id: forbid-tabs
+    -   id: remove-tabs
+-   repo: https://github.com/PyCQA/bandit
+    rev: 1.8.3
+    hooks:
+    - id: bandit
+      args: ["--skip=B101"]
+      exclude: ^(tests|live_tests)/
+-   repo: https://github.com/Lucas-C/pre-commit-hooks-markup
+    rev: v1.0.1
+    hooks:
+    -   id: rst-linter
+-   repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+    -   id: detect-secrets
+        language: system
+        exclude: "poetry.lock"
+-   repo: https://github.com/gitleaks/gitleaks
+    rev: v8.27.0
+    hooks:
+    -   id: gitleaks
+        args: ["--verbose"]
+-   repo: local
+    hooks:
+    -   id: forbid-sensitive-files
+        name: forbid key/certificate files
+        entry: 'Sensitive key/certificate file staged - pems, keys, p12s, crts, keystores etc. must never be committed.'
+        language: fail
+        files: '\.(pem|key|p12|pfx|p8|crt|cer|der|jks|keystore|truststore|pkcs12)$'
+-   repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.10.0.1
+    hooks:
+    -   id: shellcheck
+        args: ["--external-sources"]
+-   repo: https://github.com/python-poetry/poetry
+    rev: '2.1.3'
+    hooks:
+    -   id: poetry-check
+    -   id: poetry-lock

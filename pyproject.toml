@@ -1,0 +1,98 @@
+[project]
+name = "python-tak-log-analyzer"
+version = "0.1.0"
+description = "Download and analyze TAK Server device logs (crashlogs/logcats) for admin overview."
+authors = [{ name = "Stefan Gofferje", email = "stefan@gofferje.net" }]
+readme = "README.md"
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
+dynamic = ["requires-python"]
+
+[project.scripts]
+tak-log-analyzer = "tak_log_analyzer.cli:cli"
+
+[tool.poetry]
+packages = [{ include = "tak_log_analyzer", from = "src" }]
+
+[tool.black]
+line-length = 120
+target-version = ['py311']
+exclude = '''
+(
+  /(
+      \.eggs         # exclude a few common directories in the
+    | \.git          # root of the project
+    | \.hg
+    | \.mypy_cache
+    | \.tox
+    | \.venv
+    | _build
+    | buck-out
+    | build
+    | dist
+  )/
+  |  __pycache__
+)
+'''
+
+[tool.mypy]
+strict = true
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+src = ["src", "tests", "live_tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "A", "C4", "SIM"]
+
+[tool.pytest.ini_options]
+junit_family = "xunit2"
+addopts = "--cov=tak_log_analyzer --cov-fail-under=65 --cov-branch -m 'not live'"
+asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
+markers = [
+  "live: integration tests against a real TAK server; run locally only via `pytest live_tests/ -m live`",
+]
+
+[tool.pylint.format]
+max-line-length = 120
+
+[tool.pylint.design]
+max-parents = 10
+
+[tool.pylint.messages_control]
+disable = ["fixme", "W1202", "C0209", "R0902", "R0903", "R0904", "R0913", "R0914", "R0911", "R0912", "R0915", "R0917", "W0611", "C0415", "W1514", "W0718"]
+
+[tool.pylint.similarities]
+min-similarity-lines = 8
+ignore-imports = true
+
+[tool.coverage.run]
+omit = ["tests/*", "live_tests/*", "examples/*"]
+branch = true
+
+[tool.poetry.dependencies]
+python = "^3.11"
+aiohttp = "^3.9"
+click = "^8.1"
+rich = "^13.0"
+libadvian = "^1.7"
+python-takserver-api = { path = "../python-takserver-api", develop = true }
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^9.0"
+pytest-cov = "^6.1"
+pytest-asyncio = ">=1.0"
+pylint = "^3.3"
+black = "^26.3"
+ruff = "^0.9"
+mypy = "^1.15"
+pre-commit = "^4.2"
+bandit = "^1.8"
+detect-secrets = "^1.5"
+types-setuptools = "^75"
+
+[build-system]
+requires = ["poetry-core>=2.1.0"]
+build-backend = "poetry.core.masonry.api"
