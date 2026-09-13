@@ -136,3 +136,7 @@ Thumbs.db
 # TAK specific
 tak-logs/
 downloads/
+
+# Live downloaded logs (never committed)
+live_data/
+!live_data/.gitkeep
